@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TecnoMarket Perú</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--tinta:#111418;--suave:#6b7280;--linea:#e8eaed;--fondo:#ffffff;--gris:#f7f8fa;--acento:#2563eb;--verde:#059669;--desc:#dc2626;}
+    *{margin:0;padding:0;box-sizing:border-box;} body{font-family:"Inter",sans-serif;background:var(--gris);color:var(--tinta);}
+    header{background:var(--fondo);border-bottom:1px solid var(--linea);padding:1.1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+    .logo{font-weight:800;font-size:1.3rem;letter-spacing:-.02em;} .logo span{color:var(--acento);}
+    header nav a{color:var(--suave);text-decoration:none;font-size:.85rem;margin-left:1.5rem;font-weight:500;}
+    header nav a:hover{color:var(--tinta);}
+    .barra{max-width:1120px;margin:1.5rem auto 0;padding:0 1.5rem;display:flex;gap:1rem;flex-wrap:wrap;align-items:center;}
+    .barra input{flex:1;min-width:220px;border:1px solid var(--linea);background:var(--fondo);border-radius:8px;padding:.7rem 1rem;font-family:inherit;font-size:.9rem;outline:none;}
+    .barra input:focus{border-color:var(--acento);}
+    .barra select{border:1px solid var(--linea);background:var(--fondo);border-radius:8px;padding:.7rem 1rem;font-family:inherit;font-size:.85rem;cursor:pointer;}
+    .wrap{max-width:1120px;margin:1.5rem auto;padding:0 1.5rem;}
+    .head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.2rem;}
+    .head h2{font-size:1.1rem;font-weight:700;} .head span{color:var(--suave);font-size:.82rem;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1.1rem;}
+    .card{background:var(--fondo);border:1px solid var(--linea);border-radius:12px;overflow:hidden;transition:box-shadow .2s;}
+    .card:hover{box-shadow:0 8px 24px -12px rgba(0,0,0,.15);}
+    .thumb{height:150px;background:var(--gris);display:flex;align-items:center;justify-content:center;position:relative;}
+    .thumb .ini{font-size:2.6rem;font-weight:800;color:#cfd4db;letter-spacing:.04em;}
+    .thumb .tag{position:absolute;bottom:.6rem;right:.6rem;font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--suave);background:var(--fondo);padding:.12rem .45rem;border-radius:4px;border:1px solid var(--linea);}
+    .badge{position:absolute;top:.6rem;left:.6rem;background:var(--desc);color:#fff;font-size:.68rem;font-weight:600;padding:.15rem .5rem;border-radius:5px;}
+    .body{padding:.9rem 1rem 1.1rem;}
+    .marca{font-size:.7rem;color:var(--suave);text-transform:uppercase;letter-spacing:.05em;}
+    .nombre{font-size:.9rem;font-weight:600;margin:.2rem 0 .5rem;min-height:2.5em;line-height:1.3;}
+    .rating{font-size:.76rem;color:#d97706;margin-bottom:.4rem;}
+    .precio{display:flex;align-items:baseline;gap:.5rem;}
+    .precio .ahora{font-size:1.15rem;font-weight:700;} .precio .antes{font-size:.8rem;color:var(--suave);text-decoration:line-through;}
+    .estado{font-size:.72rem;margin-top:.4rem;} .disp{color:var(--verde);} .no{color:var(--desc);}
+    .links{text-align:center;margin:2.5rem 0 1rem;font-size:.85rem;}
+    .links a{color:var(--acento);margin:0 .6rem;text-decoration:none;font-weight:500;}
+    .cargando{text-align:center;padding:3rem;color:var(--suave);grid-column:1/-1;}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Tecno<span>Market</span></div>
+    <nav><a href="/api/productos/">API</a><a href="/api/docs/">Docs</a><a href="/admin/">Admin</a></nav>
+  </header>
+  <div class="barra">
+    <input id="q" type="text" placeholder="Buscar productos...">
+    <select id="cat" onchange="cargar()"><option value="">Todas las categorías</option></select>
+    <select id="ord" onchange="cargar()">
+      <option value="">Ordenar por</option>
+      <option value="precio">Precio: menor a mayor</option>
+      <option value="-precio">Precio: mayor a menor</option>
+      <option value="-creado">Más recientes</option>
+    </select>
+  </div>
+  <div class="wrap">
+    <div class="head"><h2>Catálogo de productos</h2><span id="total"></span></div>
+    <div class="grid" id="grid"><p class="cargando">Cargando...</p></div>
+    <div class="links"><a href="/api/productos/">Ver API</a> · <a href="/api/docs/">Documentación Swagger</a> · <a href="/api/redoc/">ReDoc</a></div>
+  </div>
+  <script>
+    async function cargarCats(){
+      const r=await fetch("/api/productos/?page=1");const sel=document.getElementById("cat");
+      // llenar categorías desde productos (simple)
+      const cats=["Laptops","Smartphones","Componentes","Accesorios","Audio","Monitores"];
+      cats.forEach((c,i)=>{const o=document.createElement("option");o.value=i+1;o.textContent=c;sel.appendChild(o);});
+    }
+    async function cargar(){
+      const grid=document.getElementById("grid");grid.innerHTML='<p class="cargando">Cargando...</p>';
+      let url="/api/productos/?";
+      const q=document.getElementById("q").value,cat=document.getElementById("cat").value,ord=document.getElementById("ord").value;
+      if(q)url+="search="+encodeURIComponent(q)+"&"; if(cat)url+="categoria="+cat+"&"; if(ord)url+="ordering="+ord;
+      try{
+        const r=await fetch(url);const d=await r.json();
+        document.getElementById("total").textContent=d.count+" productos";
+        if(!d.results.length){grid.innerHTML='<p class="cargando">Sin resultados.</p>';return;}
+        grid.innerHTML=d.results.map(p=>`
+          <div class="card">
+            <div class="thumb">
+              <span class="ini">${(p.nombre||"?").trim().charAt(0).toUpperCase()}</span>
+              ${p.categoria?`<span class="tag">${p.categoria.nombre}</span>`:""}
+              ${p.descuento>0?`<span class="badge">-${p.descuento}%</span>`:""}</div>
+            <div class="body">
+              <div class="marca">${p.marca}</div>
+              <div class="nombre">${p.nombre}</div>
+              <div class="rating">★ ${p.rating_promedio||"—"}</div>
+              <div class="precio"><span class="ahora">S/ ${p.precio_con_descuento}</span>
+                ${p.descuento>0?`<span class="antes">S/ ${p.precio}</span>`:""}</div>
+              <div class="estado ${p.disponible?'disp':'no'}">${p.disponible?'● En stock':'● Agotado'}</div>
+            </div>
+          </div>`).join("");
+      }catch(e){grid.innerHTML='<p class="cargando">Error al cargar.</p>';}
+    }
+    document.getElementById("q").addEventListener("keyup",e=>{if(e.key==="Enter")cargar();});
+    cargarCats();cargar();
+  </script>
+</body>
+</html>
